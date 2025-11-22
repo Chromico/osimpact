@@ -31,19 +31,19 @@ class CodeExecutionController extends Controller
         // Allow fallback to VITE_E2B_API_KEY for local dev if E2B_API_KEY not set
         $e2bApiKey = env('E2B_API_KEY') ?: env('VITE_E2B_API_KEY');
 
-        if (! $openaiApiKey) {
-            return response()->json([
-                'error' => 'Configuration missing',
-                'message' => 'OPENAI_API_KEY not set (check .env and ensure the key is on a single line)',
-            ], 500);
-        }
+        // if (! $openaiApiKey) {
+        //     return response()->json([
+        //         'error' => 'Configuration missing',
+        //         'message' => 'OPENAI_API_KEY not set (check .env and ensure the key is on a single line)',
+        //     ], 500);
+        // }
 
-        if (! $e2bApiKey) {
-            return response()->json([
-                'error' => 'Configuration missing',
-                'message' => 'E2B_API_KEY (or VITE_E2B_API_KEY) not set in .env',
-            ], 500);
-        }
+        // if (! $e2bApiKey) {
+        //     return response()->json([
+        //         'error' => 'Configuration missing',
+        //         'message' => 'E2B_API_KEY (or VITE_E2B_API_KEY) not set in .env',
+        //     ], 500);
+        // }
 
         $scriptPath = base_path('scripts/run-agent-mcp.js');
 
