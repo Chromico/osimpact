@@ -28,6 +28,7 @@ export default function AuthCardLayout({
                 >
                     <div className="flex h-9 w-9 items-center justify-center">
                         <AppLogoIcon className="size-9 fill-current text-black dark:text-white" />
+                        <h1 className="sr-only">Open Source Impact</h1>
                     </div>
                 </Link>
 
