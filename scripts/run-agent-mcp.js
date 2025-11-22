@@ -52,18 +52,18 @@ const normalizeMessages = (messages = []) =>
           : String(msg.content ?? ''),
     }));
 
-if (!E2B_API_KEY) {
-  log('fatal_missing_env', { key: 'E2B_API_KEY' });
-  process.exit(1);
-}
-if (!OPENAI_API_KEY) {
-  log('fatal_missing_env', { key: 'OPENAI_API_KEY' });
-  process.exit(1);
-}
-if (!GITHUB_TOKEN) {
-  log('fatal_missing_env', { key: 'GITHUB_TOKEN' });
-  process.exit(1);
-}
+// if (!E2B_API_KEY) {
+//   log('fatal_missing_env', { key: 'E2B_API_KEY' });
+//   process.exit(1);
+// }
+// if (!OPENAI_API_KEY) {
+//   log('fatal_missing_env', { key: 'OPENAI_API_KEY' });
+//   process.exit(1);
+// }
+// if (!GITHUB_TOKEN) {
+//   log('fatal_missing_env', { key: 'GITHUB_TOKEN' });
+//   process.exit(1);
+// }
 
 // Intentionally not emitting env_ok to keep initial terminal clean
 
