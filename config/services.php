@@ -40,7 +40,7 @@ return [
     ],
 
     'e2b' => [
-        'api_key' => env('E2B_API_KEY'),
+        'api_key' => env('E2B_API_KEY', env('VITE_E2B_API_KEY')),
     ],
 
     'github' => [

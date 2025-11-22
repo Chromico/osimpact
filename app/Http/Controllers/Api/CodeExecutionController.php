@@ -28,8 +28,7 @@ class CodeExecutionController extends Controller
         }
 
         $openaiApiKey = config('services.openai.api_key');
-        // Allow fallback to VITE_E2B_API_KEY for local dev if E2B_API_KEY not set
-        $e2bApiKey = env('E2B_API_KEY') ?: env('VITE_E2B_API_KEY');
+        $e2bApiKey = config('services.e2b.api_key');
 
         // if (! $openaiApiKey) {
         //     return response()->json([
