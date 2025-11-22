@@ -24,7 +24,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $hasToken = $user->github_token !== null;
         return Inertia::render('dashboard', [
             'githubConnected' => $hasToken,
-            'githubUsername' => $user->github_username ?? env('GITHUB_USERNAME') ?? 'me',
+            'githubUsername' => $user->github_username ?? config('services.github.username') ?? 'me',
             'githubAuthUrl' => route('github.redirect'),
         ]);
     })->name('dashboard');

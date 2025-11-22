@@ -146,7 +146,19 @@ Do NOT make up information.`;
 
 
     log('agent_run_start');
-    const result = await runAgent(agent, seeded);
+
+    // Start heartbeat to keep connection alive during long agent runs
+    const heartbeat = setInterval(() => {
+      log('heartbeat', { ts: new Date().toISOString() });
+    }, 15000);
+
+    let result;
+    try {
+      result = await runAgent(agent, seeded);
+    } finally {
+      clearInterval(heartbeat);
+    }
+
     log('agent_output_received', {
       hasFinalOutput: typeof result.finalOutput !== 'undefined',
       finalOutputType: typeof result.finalOutput,

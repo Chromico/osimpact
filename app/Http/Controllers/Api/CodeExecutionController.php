@@ -15,6 +15,8 @@ class CodeExecutionController extends Controller
      */
     public function runAgent(Request $request): StreamedResponse|JsonResponse
     {
+        set_time_limit(600); // Allow up to 10 minutes for execution
+
         $user = $request->user();
         
         // Use user's token
@@ -48,7 +50,7 @@ class CodeExecutionController extends Controller
 
         // Pass the user's GitHub token to the script
         $debug = $request->boolean('debug');
-        $githubUsername = $user->github_username ?? env('GITHUB_USERNAME') ?? 'me';
+        $githubUsername = $user->github_username ?? config('services.github.username') ?? 'me';
 
         $messages = $request->input('messages');
         $messagesJson = null;
