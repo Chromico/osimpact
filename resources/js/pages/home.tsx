@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import AppearanceToggleDropdown from '@/components/appearance-dropdown';
 import { login, register } from '@/routes';
 import { Head, Link } from '@inertiajs/react';
 import {
@@ -12,6 +13,7 @@ import {
     Server,
     Settings,
     Shield,
+    User,
 } from 'lucide-react';
 
 const primaryFeatures = [
@@ -25,7 +27,7 @@ const primaryFeatures = [
     {
         name: 'Intelligent AI Models',
         description:
-            'Powered by intelligent & high performanceAI models from OpenAI for a more accurate analysis',
+            'Powered by intelligent & high performance AI models from OpenAI for a more accurate analysis',
         href: '#',
         icon: BrainCircuit,
     },
@@ -34,7 +36,7 @@ const primaryFeatures = [
         description:
             'Conduct your open source impact analysis easily from our intuitive dashboard.',
         href: '#',
-        icon: Calendar,
+        icon: User,
     },
 ];
 const secondaryFeatures = [
@@ -111,6 +113,7 @@ export default function Home() {
                             {/* Search or other items */}
                         </div>
                         <nav className="flex items-center space-x-2">
+                            <AppearanceToggleDropdown className="mr-2" />
                             <Button variant="ghost" asChild>
                                 <Link href={login()}>Login</Link>
                             </Button>
@@ -193,17 +196,10 @@ export default function Home() {
                             <div className="max-w-3xl flex-none sm:max-w-5xl lg:max-w-none">
                                 <img
                                     alt="App screenshot"
-                                    src="https://tailwindcss.com/plus-assets/img/component-images/project-app-screenshot.png"
+                                    src="/images/dashboard-osimpact.png"
                                     width={2432}
                                     height={1442}
-                                    className="w-304 rounded-md bg-muted/50 shadow-xl ring-1 ring-border dark:hidden"
-                                />
-                                <img
-                                    alt="App screenshot"
-                                    src="https://tailwindcss.com/plus-assets/img/component-images/dark-project-app-screenshot.png"
-                                    width={2432}
-                                    height={1442}
-                                    className="w-304 rounded-md bg-muted/5 shadow-2xl ring-1 ring-border not-dark:hidden"
+                                    className="w-304 rounded-md bg-muted/50 shadow-xl ring-1 ring-border"
                                 />
                             </div>
                         </div>
@@ -385,9 +381,6 @@ export default function Home() {
                         <h2 className="text-4xl font-semibold tracking-tight text-balance text-foreground sm:text-5xl">
                             Measure your impact today.
                         </h2>
-                        <p className="mx-auto mt-6 max-w-xl text-lg/8 text-pretty text-muted-foreground">
-                            Know your worth.
-                        </p>
                         <div className="mt-10 flex items-center justify-center gap-x-6">
                             <Button asChild>
                                 <Link href={register()}>Get started</Link>
@@ -399,7 +392,7 @@ export default function Home() {
 
             {/* Footer */}
             <footer className="mx-auto max-w-7xl px-6 lg:px-8">
-                <div className="border-t border-border py-12 flex justify-center">
+                <div className="border-t border-border py-25 flex justify-center">
                     <p className="text-center text-sm/6 text-muted-foreground">
                         &copy; 2025 Open Source Impact. All rights reserved.
                     </p>

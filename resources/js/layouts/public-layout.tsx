@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import AppearanceToggleDropdown from '@/components/appearance-dropdown';
 import { login, register, dashboard } from '@/routes';
 import { Link, usePage } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
@@ -34,6 +35,7 @@ export default function PublicLayout({ children }: PropsWithChildren) {
                             {/* Search or other items */}
                         </div>
                         <nav className="flex items-center space-x-2">
+                            <AppearanceToggleDropdown className="mr-2" />
                             {auth.user ? (
                                 <Button asChild>
                                     <Link href={dashboard()}>Dashboard</Link>

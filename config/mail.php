@@ -61,14 +61,11 @@ return [
             // ],
         ],
 
-        // 'resend' => [
-        //     'transport' => 'resend',
-        // ],
-
         'resend' => [
-            'key' => env('RESEND_KEY'),
+            'transport' => 'resend',
         ],
 
+        
         'sendmail' => [
             'transport' => 'sendmail',
             'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
