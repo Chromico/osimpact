@@ -1,0 +1,280 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\CodeExecutionRequest;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
+
+class CodeExecutionController extends Controller
+{
+    /**
+     * Execute code using OpenAI and E2B.
+     */
+    public function execute(CodeExecutionRequest $request): JsonResponse
+            $prompt = $request->validated()['prompt'];
+            $apiKey = config('services.openai.api_key');
+
+            if (! $apiKey) {
+                return response()->json([
+                    'error' => 'OpenAI API key not configured',
+                    'message' => 'Please set OPENAI_API_KEY in your .env file',
+                ], 500);
+            }
+
+            // Call OpenAI to generate code
+            $openaiResponse = Http::withHeaders([
+                'Authorization' => 'Bearer '.$apiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(30)->post('https://api.openai.com/v1/chat/completions', [
+                'model' => 'gpt-4o',
+                'messages' => [
+                    [
+                        'role' => 'system',
+                        'content' => 'You are a helpful assistant that can execute python code in a Jupyter notebook. Only respond with the code to be executed and nothing else. Strip backticks in code blocks.',
+                    ],
+                    [
+                        'role' => 'user',
+                        'content' => $prompt,
+                    ],
+                ],
+            ]);
+
+            if (! $openaiResponse->successful()) {
+                $errorData = $openaiResponse->json();
+                Log::error('OpenAI API error', [
+                    'status' => $openaiResponse->status(),
+                    'response' => $errorData,
+                ]);
+
+                return response()->json([
+                    'error' => 'Failed to generate code from OpenAI',
+                    'message' => $errorData['error']['message'] ?? 'Unknown error',
+                    'details' => $errorData,
+                ], $openaiResponse->status());
+            }
+
+            $generatedCode = $openaiResponse->json()['choices'][0]['message']['content'];
+
+            // Execute the code using E2B via Node.js script
+            $e2bApiKey = env('E2B_API_KEY') ?? env('VITE_E2B_API_KEY');
+            
+            if (! $e2bApiKey) {
+                return response()->json([
+                    'error' => 'E2B API key not configured',
+                    'message' => 'Please set E2B_API_KEY in your .env file',
+                ], 500);
+            }
+
+            $codeBase64 = base64_encode($generatedCode);
+            $scriptPath = base_path('scripts/execute-e2b.js');
+
+            $process = \Illuminate\Support\Facades\Process::env(['E2B_API_KEY' => $e2bApiKey])
+                ->run(['node', $scriptPath, $codeBase64]);
+
+            if ($process->failed()) {
+                Log::error('E2B execution failed', [
+                    'output' => $process->output(),
+                    'error' => $process->errorOutput(),
+                ]);
+                
+                return response()->json([
+                    'error' => 'Failed to execute code in E2B',
+                    'message' => $process->errorOutput() ?: 'Unknown error',
+                    'details' => $process->output(),
+                ], 500);
+            }
+
+            $executionResult = json_decode($process->output(), true);
+
+            return response()->json([
+                'success' => true,
+                'code' => $generatedCode,
+                'prompt' => $prompt,
+                'result' => $executionResult,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Code execution error: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'error' => 'An error occurred during code execution',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    /**
+     * Run an AI agent inside an E2B sandbox with Docker MCP servers (GitHub, etc.).
+     */
+    public function runAgent(Request $request): JsonResponse
+            /** @var \App\Models\User $user */
+            $user = $request->user();
+
+            // Check if user has connected their GitHub account
+            if (! $user->github_token) {
+                return response()->json([
+                    'error' => 'GitHub not connected',
+                    'message' => 'Please connect your GitHub account first',
+                ], 403);
+            }
+
+    {
+        try {
+            $repoName = (string) $request->input('repo_name');
+            $repoDescription = (string) ($request->input('repo_description') ?? 'Repo created by MCP agent via E2B sandbox');
+
+            if ($repoName === '') {
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'message' => 'repo_name is required',
+                ], 422);
+            }
+
+            $e2bKey = env('E2B_API_KEY') ?? env('VITE_E2B_API_KEY');
+            $githubToken = $user->github_token;
+            $githubOwner = $user->github_username ?? 'me';
+            $openai = env('OPENAI_API_KEY');
+
+            if (! $e2bKey || ! $openai || ! $githubToken) {
+                return response()->json([
+                    'error' => 'Missing credentials',
+                    'message' => 'Ensure E2B_API_KEY and OPENAI_API_KEY are set in .env',
+                ], 500);
+            }
+
+            $script = base_path('scripts/run-agent-mcp.js');
+            if (! file_exists($script)) {
+                return response()->json([
+                    'error' => 'Agent script not found',
+                    'message' => 'Missing scripts/run-agent-mcp.js',
+                ], 500);
+            }
+
+            $process = Process::env([
+                'E2B_API_KEY' => $e2bKey,
+                'OPENAI_API_KEY' => $openai,
+                'GITHUB_TOKEN' => $githubToken,
+                'GITHUB_OWNER' => $githubOwner ?? '',
+            ])->run([
+                'node',
+                $script,
+                $repoName,
+                $repoDescription,
+            ]);
+
+            if ($process->failed()) {
+                Log::error('Agent run failed', [
+                    'stdout' => $process->output(),
+                    'stderr' => $process->errorOutput(),
+                ]);
+
+                return response()->json([
+                    'error' => 'Agent execution failed',
+                    'message' => trim($process->errorOutput()) ?: 'Unknown error',
+                    'details' => trim($process->output()),
+                ], 500);
+            }
+
+            $out = trim($process->output());
+            $payload = json_decode($out, true);
+
+            return response()->json([
+                'success' => true,
+                'output' => $payload ?: $out,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('runAgent error: '.$e->getMessage(), [ 'trace' => $e->getTraceAsString() ]);
+            return response()->json([
+                'error' => 'Agent error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Run Ansible agent: AI generates playbook, tests via SSH in E2B sandbox.
+     */
+    public function runAnsibleAgent(Request $request): JsonResponse
+    {
+        try {
+            $taskDescription = (string) $request->input('task_description');
+
+            if ($taskDescription === '') {
+                return response()->json([
+                    'error' => 'Validation failed',
+                    'message' => 'task_description is required',
+                ], 422);
+            }
+
+            $e2bKey = env('E2B_API_KEY') ?? env('VITE_E2B_API_KEY');
+            $openai = env('OPENAI_API_KEY');
+            // Allow overriding SSH connection details via request body for per-request control
+            $sshHost = (string) ($request->input('ssh_host') ?? env('SSH_HOST'));
+            $sshUser = (string) ($request->input('ssh_user') ?? env('SSH_USER'));
+            $sshPort = (string) ($request->input('ssh_port') ?? env('SSH_PORT') ?? '22');
+            $sshKey = (string) ($request->input('ssh_private_key') ?? env('SSH_PRIVATE_KEY'));
+
+            if (! $e2bKey || ! $openai || ! $sshHost || ! $sshUser || ! $sshKey) {
+                return response()->json([
+                    'error' => 'Missing credentials',
+                    'message' => 'Ensure E2B_API_KEY, OPENAI_API_KEY, and SSH details (host, user, private key) are provided',
+                ], 500);
+            }
+
+            $script = base_path('scripts/run-ansible-agent.js');
+            if (! file_exists($script)) {
+                return response()->json([
+                    'error' => 'Ansible agent script not found',
+                    'message' => 'Missing scripts/run-ansible-agent.js',
+                ], 500);
+            }
+
+            $process = Process::env([
+                'E2B_API_KEY' => $e2bKey,
+                'OPENAI_API_KEY' => $openai,
+                'SSH_HOST' => $sshHost,
+                'SSH_USER' => $sshUser,
+                'SSH_PORT' => $sshPort,
+                'SSH_PRIVATE_KEY' => $sshKey,
+            ])->timeout(300)->run([
+                'node',
+                $script,
+                $taskDescription,
+            ]);
+
+            if ($process->failed()) {
+                Log::error('Ansible agent run failed', [
+                    'stdout' => $process->output(),
+                    'stderr' => $process->errorOutput(),
+                ]);
+
+                return response()->json([
+                    'error' => 'Ansible agent execution failed',
+                    'message' => trim($process->errorOutput()) ?: 'Unknown error',
+                    'details' => trim($process->output()),
+                ], 500);
+            }
+
+            $out = trim($process->output());
+            $payload = json_decode($out, true);
+
+            return response()->json([
+                'success' => true,
+                'result' => $payload ?: $out,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('runAnsibleAgent error: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return response()->json([
+                'error' => 'Ansible agent error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+}
